@@ -9,6 +9,8 @@ import json
 import tweepy
 import pandas as pd
 import datetime
+import pathlib
+from math import inf
 
 sys.path.append("..")
 
@@ -20,7 +22,9 @@ def add_args():
     parser.add_argument('-q', '--query', metavar='', required=True, help='A UTF-8 encoded search query of 500 characters maximum. For operators reference, please refer to https://developer.twitter.com/en/docs/tweets/rules-and-filtering/overview/standard-operators.html')
     parser.add_argument('-s', '--since', metavar='', required=True, help='Returns results that are more recent than the specified date (UTC time). Expected format: "YYYY-MM-DD HH:MM"')
     parser.add_argument('-u', '--until', metavar='', required=True, help='Returns results that are older than  the specified date (UTC time). Expected format: "YYYY-MM-DD HH:MM"')
-    parser.add_argument('-o', '--outfile', metavar='', default='outfile.json', help='Filename for the resulting output. Default is "<keywords>.json"')
+    parser.add_argument('-m', '--maxtweets', metavar='', default=inf, type=int, help='Stops the gathering when the max specified number is reached.')
+    parser.add_argument('-t', '--toptweets', action="store_true", help='Returns top retweet tweets first. maxtweets argument has needs to be set.')
+    parser.add_argument('-o', '--outfile', metavar='', help='Filename for the resulting output. Default is "<first_keyword>.csv"')
     return parser.parse_args()
 
 
@@ -66,28 +70,47 @@ def json_format(data_json):
     current_tweet['screen_name'] = data_json.user.screen_name
     current_tweet['retweet_count'] = data_json.retweet_count
     current_tweet['favorite_count'] = data_json.favorite_count
-    current_tweet['text'] = data_json.text
+    current_tweet['text'] = data_json.full_text
     current_tweet['lang'] = data_json.lang
     return current_tweet
 
 
-def gather(api, query, s_id, last_id, outfile):
+def gather(api, query, s_id, last_id, outfile, maxtweets, toptweets):
     #dirty workaround
     last_id+=1
     counter = 0
 
+    extension = pathlib.Path(outfile).suffix
+    if toptweets:
+        rtype = 'popular'
+    else:
+        rtype = 'recent'
+
+    print(rtype)
+
     with open(outfile, 'w',  encoding='utf8') as f:
-        f.write('[\n')
+        if extension == '.csv':
+            f.write('id,created_at,userid,username,media_type,has_media,screen_name,retweet_count,favorite_count,text,lang\n')
+        elif extension == '.json':
+            f.write('[\n')
         while True:
             try:
-                new_tweets = api.search(q = query, count=100, include_entities=True, since_id=s_id, max_id=str(last_id-1))
+                new_tweets = api.search(q = query, count=100, include_entities=True, result_type=rtype, tweet_mode='extended', since_id=s_id, max_id=str(last_id-1))
                 if not new_tweets:
                     print ('\nAll done! Finishing...')
                     break
                 for tweet in new_tweets:
                     formatted = json_format(tweet)
-                    f.write(json.dumps(formatted, ensure_ascii=False))
-                    f.write(',\n')
+                    if extension == '.json':
+                        f.write(json.dumps(formatted, ensure_ascii=False))
+                        f.write(',\n')
+                    elif extension == '.csv':
+                        formatted['text'] = ' '.join([line.strip() for line in formatted['text'].strip().splitlines()])
+                        formatted['text'] = '"' + formatted['text'] + '"'
+                        df = pd.DataFrame(formatted, index=[0])
+                        csv_string = df.to_csv(header=False, index=False)
+                        csv_string = ' '.join([line.strip() for line in csv_string.strip().splitlines()])
+                        f.write(csv_string + '\n')
 
                     counter+=1
 
@@ -95,6 +118,9 @@ def gather(api, query, s_id, last_id, outfile):
                         print("\rNumber of tweets collected so far...: %i"%counter, end='', flush=True)
                     else:
                         print(counter, end=' ', flush=True)
+
+                    if counter >= maxtweets:
+                        break
 
                 last_id = new_tweets[-1].id
             except Exception as e:
@@ -148,7 +174,9 @@ def main():
 
     (id_since, id_until) = date_adjust(api, date_since, date_until, args.query)
 
-    gather(api, args.query, id_since, id_until, args.outfile)
+    if args.outfile == None:
+        args.outfile = args.query.split()[0] + '.csv'
+    gather(api, args.query, id_since, id_until, args.outfile, args.maxtweets, args.toptweets)
 
 if __name__== "__main__":
     main()
