@@ -3,6 +3,7 @@
 
 import sys
 import os.path
+import os
 import time
 import argparse
 import json
@@ -38,14 +39,16 @@ def find_id(api, date, query):
 
     while True:
         try:
-            new_tweets = api.search(q = query, count=100, include_entities=True, max_id=str(last_id-1))
+            new_tweets = api.search(q = query, count=100, result_type="recent", include_entities=True, max_id=str(last_id-1))
             if not new_tweets:
+                if current != None:
+                    return (current.id)
                 break
             for tweet in new_tweets:
                 if abs((date - tweet.created_at).total_seconds()) <= abs((date - current.created_at).total_seconds()):
                     current = tweet
                 else:
-                    return current.id
+                    return (current.id)
             last_id = new_tweets[-1].id
         except Exception as e:
             #continue
@@ -127,26 +130,35 @@ def gather(api, query, s_id, last_id, outfile, maxtweets, toptweets):
                 #continue
                 raise
 
+        if extension == '.json':
+            f.seek(f.tell() - 2, os.SEEK_SET)
+            f.write("\n]")
+
 
 def date_adjust(api, since, until, query):
     now = datetime.datetime.utcnow()
-    id_since = None
 
     if until > now:
         print("Warning: 'until' parameter is newer than UTC datetime now. Defaulting to UTC now instead...")
         until = now
-    if since < (now - datetime.timedelta(days = 10)):
-        print("Warning: 'since' parameter is older than 10 days. Any tweet older than 9 days will not be retrieved.")
+    if since < (now - datetime.timedelta(days = 8)):
+        print("Warning: 'since' parameter is older than 10 days. Any tweet older than 7 days will not be retrieved.")
         since = None
 
-    print('Dates validated!\nFinding date ranges. This may take a while...')
+    id_since = find_id(api, since, query)
     id_until = find_id(api, until, query)
+
+    print('Dates validated!\nFinding date ranges. This may take a while...')
 
     if since != None:
         id_since = find_id(api, since, query)
-    print ('Found date ranges!')
 
-    return (id_since, id_until)
+    if id_until != None and id_since != None:
+        print ('Found date ranges!')
+        return (id_since, id_until)
+    else:
+        print("Could not any Tweets within the date range. Please review your query.")
+        sys.exit(0)
 
 
 def date_check(since, until):
