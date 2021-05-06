@@ -21,8 +21,8 @@ from modules.manager import TokenManager
 def add_args():
     parser = argparse.ArgumentParser(description='Collects tweets from keywords in a date range, or the maximum limited allowed at the moment.')
     parser.add_argument('-q', '--query', metavar='', required=True, help='A UTF-8 encoded search query of 500 characters maximum. For operators reference, please refer to https://developer.twitter.com/en/docs/tweets/rules-and-filtering/overview/standard-operators.html')
-    parser.add_argument('-s', '--since', metavar='', required=True, help='Returns results that are more recent than the specified date (UTC time). Expected format: "YYYY-MM-DD HH:MM"')
-    parser.add_argument('-u', '--until', metavar='', required=True, help='Returns results that are older than  the specified date (UTC time). Expected format: "YYYY-MM-DD HH:MM"')
+    parser.add_argument('-s', '--since', metavar='', required=True, help='Returns results that are more recent than the specified tweet ID')
+    parser.add_argument('-u', '--until', metavar='', required=True, help='Returns results that are older than the specified date tweet ID')
     parser.add_argument('-m', '--maxtweets', metavar='', default=inf, type=int, help='Stops the gathering when the max specified number is reached.')
     parser.add_argument('-t', '--toptweets', action="store_true", help='Returns top retweet tweets first. maxtweets argument has needs to be set.')
     parser.add_argument('-o', '--outfile', metavar='', help='Filename for the resulting output. Default is "<first_keyword>.csv"')
@@ -39,7 +39,7 @@ def find_id(api, date, query):
 
     while True:
         try:
-            new_tweets = api.search(q = query, count=100, result_type="recent", include_entities=True, max_id=str(last_id-1))
+            new_tweets = api.search(q = query, count=100, result_type="recent", tweet_mode="extended", include_entities=True, max_id=str(last_id-1))
             if not new_tweets:
                 if current != None:
                     return (current.id)
@@ -167,8 +167,8 @@ def date_check(since, until):
     if since > until:
         print ("'since' parameter cannot be newer than 'until'.\nQuitting...")
         sys.exit(0)
-    elif until < (now - datetime.timedelta(days = 10)):
-        print ("'until' parameter cannot be older than 10 days as per Twitter API regulations.\nQuitting...")
+    elif until < (now - datetime.timedelta(days = 8)):
+        print ("'until' parameter cannot be older than 7 days as per Twitter API regulations.\nQuitting...")
         sys.exit(0)
 
 
@@ -176,15 +176,15 @@ def date_check(since, until):
 def main():
     args = add_args()
 
-    date_until = pd.to_datetime(args.until)
-    date_since = pd.to_datetime(args.since)
+    id_until = int(args.until)
+    id_since = int(args.since)
 
-    date_check(date_since, date_until)
+    #date_check(date_since, date_until)
 
     manager = TokenManager()
     api = manager.init_api()
 
-    (id_since, id_until) = date_adjust(api, date_since, date_until, args.query)
+    #(id_since, id_until) = date_adjust(api, date_since, date_until, args.query)
 
     if args.outfile == None:
         args.outfile = args.query.split()[0] + '.csv'
