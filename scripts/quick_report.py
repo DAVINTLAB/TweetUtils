@@ -1,12 +1,10 @@
 #!/usr/bin/env python3
 # -*- coding: utf-8 -*-
+
+import os
+import re
 import sys
 import argparse
-import ijson
-import json
-import csv
-import re
-import pprint
 
 sys.path.append("..")
 
@@ -44,13 +42,17 @@ def format_print_tweet(tweet, username_key):
 def report(infile, outfile, displaycount):
     #initialize cleaner and load stopwords
     cleaner = TweetCleaner()
-    stopwords = cleaner.load_stopwords(['stopwords/stopwords_en.txt', 'stopwords/stopwords_pt-br.txt'])
+    stopwords = cleaner.load_stopwords([os.path.abspath(os.path.join(os.path.dirname( __file__ ), 'modules', 'stopwords', 'stopwords_pt-br.txt')), os.path.abspath(os.path.join(os.path.dirname( __file__ ), 'modules', 'stopwords', 'stopwords_en.txt'))])
 
     #read file with loader module
-    print('Reading file. This may take a while...')
+    sys.stdout.write('Reading file. This may take a while...'+"\n")
+    sys.stdout.flush()
+    #print('Reading file. This may take a while...')
     loader = Loader()
     items = loader.read_file(infile)
-    print('File read successfully!\nProcessing the summary...')
+    sys.stdout.write('File read successfully!\nProcessing the summary...'+"\n")
+    sys.stdout.flush()
+    #print('File read successfully!\nProcessing the summary...')
 
     if 'text' not in items[0]:
         print("Warning: 'text' key is required.\nTerminating...")
@@ -158,12 +160,15 @@ def report(infile, outfile, displaycount):
     with open(outfile, 'w', encoding='utf8') as f:
         f.write(summary)
 
-    print('Succesfully wrote file to ' + outfile + '!')
+    sys.stdout.write('Succesfully wrote file to ' + outfile + '!'+"\n")
+    sys.stdout.flush()
+    #print('Succesfully wrote file to ' + outfile + '!')
 
 
-def main():
-    args = add_args()
+def main(args):
+    #args = add_args()
     report(args.infile, args.outfile, args.displaycount)
 
 if __name__== "__main__":
-    main()
+    args = add_args()
+    main(args)
