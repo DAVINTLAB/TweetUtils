@@ -31,7 +31,7 @@ def date_check(since, until):
 
 def main():
     args = add_args()
-    client = tweepy.Client(args.key)
+    client = tweepy.Client(args.key, wait_on_rate_limit=True)
 
     date_check(datetime.datetime.strptime(args.start_time, '%Y-%m-%dT%H:%MZ'), datetime.datetime.strptime(args.end_time, '%Y-%m-%dT%H:%MZ'))
     args.start_time = args.start_time[:-1]+':00Z'

@@ -17,7 +17,7 @@ def add_args():
 def main():
     args = add_args()
     arq = open(args.outfile, 'w')
-    client = tweepy.Client(args.key)
+    client = tweepy.Client(args.key, wait_on_rate_limit=True)
 
     arq.write("[\n")
     counter = 1
