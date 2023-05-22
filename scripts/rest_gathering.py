@@ -25,10 +25,6 @@ def date_check(since, until):
         sys.stdout.write("'since' parameter cannot be newer than 'until'.\nQuitting...")
         sys.exit(0)
 
-    elif until < (now - datetime.timedelta(days = 8)):
-        sys.stdout.write("'until' parameter cannot be older than 7 days as per Twitter API regulations.\nQuitting...")
-        sys.exit(0)
-
 def main():
     args = add_args()
     client = tweepy.Client(args.key, wait_on_rate_limit=True)
